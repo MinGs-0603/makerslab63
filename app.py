@@ -4,11 +4,11 @@ import calendar
 
 # --- 1. 환경 설정 및 초기화 ---
 
-# 출석 기간 설정 (사용자 요청 기반)
-START_DATE = date(2025, 12, 7) # 2025년 12월 7일
-END_DATE = date(2026, 1, 14)   # 2026년 1월 14일
-USER_NAME = "진민수" # 사용자 이름 고정
-TODAY_TEST_DATE = date(2025, 12, 7) # 테스트를 위해 횟수 제한을 해제한 날짜
+# 출석 기간 설정 (오늘 날짜로 자동 업데이트)
+START_DATE = date.today()       # 오늘 날짜로 설정
+END_DATE = START_DATE + timedelta(days=40)  # 시작일로부터 40일 후로 종료일 설정
+USER_NAME = "진민수" 
+TODAY_TEST_DATE = date.today() # 테스트 날짜도 오늘로 설정
 
 # Streamlit 페이지 설정
 st.set_page_config(
@@ -18,31 +18,31 @@ st.set_page_config(
 )
 
 # 세션 상태 초기화 (출석 기록 저장)
-# { '2025-12-07': '12:00:00', '2025-12-08': '09:30:00' } 형식으로 저장
 if 'checked_dates_with_time' not in st.session_state:
     st.session_state.checked_dates_with_time = {}
 
-# --- 2. 디자인 및 캘린더 CSS ---
-st.markdown("""
+# --- 2. 디자인 및 캘린더 CSS (텍스트 색상 수정됨) ---
+st.markdown(f"""
     <style>
     /* 1. 기본 스타일 */
-    .stApp {
-        background: linear-gradient(135deg, #e6f7ff 0%, #ffffff 100%); /* 밝은 하늘색 배경 */
+    .stApp {{
+        background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%); /* 밝은 배경 */
         font-family: 'Malgun Gothic', 'Apple Gothic', sans-serif;
-    }
+        color: #333333; /* **모든 텍스트 색상을 짙은 회색으로 강제 설정** */
+    }}
     
     /* 2. 제목 */
-    h1 {
+    h1 {{
         color: #004a7c; /* 짙은 파랑 */
         text-align: center;
         padding-bottom: 10px;
         margin-bottom: 20px;
         font-weight: 900;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-    }
+    }}
     
     /* 3. 출석 버튼 */
-    .stButton>button {
+    .stButton>button {{
         background-color: #4CAF50; /* 초록색 (성공 강조) */
         color: white;
         border-radius: 12px;
@@ -53,73 +53,74 @@ st.markdown("""
         box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
         transition: all 0.2s;
         width: 100%;
-    }
-    .stButton>button:hover {
+    }}
+    .stButton>button:hover {{
         background-color: #45a049;
         box-shadow: 0 6px 12px rgba(76, 175, 80, 0.5);
-    }
+    }}
     
     /* 4. 메트릭 */
-    div[data-testid="stMetric"] {
+    div[data-testid="stMetric"] {{
         background-color: white;
         border-radius: 10px;
         padding: 15px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
         text-align: center;
         border-top: 5px solid #007bff;
-    }
-    div[data-testid="stMetricValue"] {
+    }}
+    div[data-testid="stMetricValue"] {{
         color: #007bff !important;
         font-size: 2.2rem !important;
         font-weight: 900;
-    }
+    }}
 
     /* 5. 캘린더 스타일 */
-    .calendar-container {
+    .calendar-container {{
         padding: 20px;
         background-color: #ffffff;
         border-radius: 15px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-    .calendar-grid {
+    }}
+    .calendar-grid {{
         display: grid;
         grid-template-columns: repeat(7, 1fr);
         gap: 5px;
         margin-top: 10px;
         text-align: center;
-    }
-    .day-header {
+    }}
+    .day-header {{
         font-weight: bold;
         color: #333;
         padding: 5px 0;
-    }
-    .day-box {
+    }}
+    .day-box {{
         padding: 8px 0;
         border-radius: 8px;
         font-weight: 600;
         cursor: default;
         transition: background-color 0.2s;
-    }
-    .day-box.weekend {
+        color: #333333; /* 달력 날짜 글씨색도 명시적으로 지정 */
+    }}
+    .day-box.weekend {{
         color: #ff6347; /* 주말(토/일) */
-    }
-    .day-box.target {
+    }}
+    .day-box.target {{
         background-color: #f0f0f0;
-    }
-    .day-box.checked {
+    }}
+    .day-box.checked {{
         background-color: #4CAF50; /* 출석 성공: 초록 */
         color: white;
         border: 2px solid #388e3c;
-    }
-    .day-box.today {
+    }}
+    .day-box.today {{
         background-color: #FFC107; /* 오늘: 노랑 */
         color: #333;
         border: 2px solid #ffa000;
         font-weight: 800;
-    }
-    .day-box.outside {
+    }}
+    .day-box.outside {{
         color: #ccc; /* 기간 외 */
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -336,9 +337,15 @@ st.markdown("---")
 
 # --- 7. 달력 시각화 렌더링 ---
 
-# 출석 기간이 12월과 1월에 걸쳐 있으므로 두 달을 모두 표시
-render_calendar(date(2025, 12, 1))
-render_calendar(date(2026, 1, 1))
+# 출석 기간이 현재 달과 다음 달에 걸쳐 있을 수 있으므로 두 달을 모두 표시
+current_month_start = date(today.year, today.month, 1)
+render_calendar(current_month_start)
+
+# 다음 달이 있다면 다음 달도 표시
+next_month = current_month_start + timedelta(days=32)
+next_month_start = date(next_month.year, next_month.month, 1)
+if next_month_start <= END_DATE:
+    render_calendar(next_month_start)
 
 st.markdown("---")
 
